@@ -137,3 +137,74 @@
 (define-read-only (get-report-details (report-id uint))
     (map-get? reports { report-id: report-id })
 )
+
+(define-read-only (get-analytics-summary)
+    {
+        total-ports: (- (var-get next-port-id) u1),
+        total-reports: (- (var-get next-report-id) u1),
+        active-ports: (count-active-ports)
+    }
+)
+
+(define-read-only (get-port-analytics (port-id uint))
+    (match (map-get? ports { port-id: port-id })
+        port 
+        (some {
+            port-id: port-id,
+            name: (get name port),
+            country: (get country port),
+            reputation-score: (get reputation-score port),
+            total-reports: (get total-reports port),
+            is-verified: (get is-verified port),
+            risk-level: (categorize-risk (get total-reports port))
+        })
+        none)
+)
+
+(define-read-only (get-report-analytics (report-id uint))
+    (match (map-get? reports { report-id: report-id })
+        report
+        (let ((total-votes (+ (get upvotes report) (get downvotes report))))
+            (some {
+                report-id: report-id,
+                reporter: (get reporter report),
+                port-id: (get port-id report),
+                barrier-type: (get barrier-type report),
+                total-votes: total-votes,
+                approval-rate: (if (> total-votes u0)
+                                  (/ (* (get upvotes report) u100) total-votes)
+                                  u0),
+                timestamp: (get timestamp report)
+            }))
+        none)
+)
+
+(define-read-only (get-verification-status (port-id uint))
+    (match (map-get? ports { port-id: port-id })
+        port (get is-verified port)
+        false)
+)
+
+(define-read-only (get-port-reputation (port-id uint))
+    (match (map-get? ports { port-id: port-id })
+        port (get reputation-score port)
+        0)
+)
+
+(define-private (count-active-ports)
+    (fold count-port-helper (list u1 u2 u3 u4 u5 u6 u7 u8 u9 u10) u0)
+)
+
+(define-private (count-port-helper (port-id uint) (acc uint))
+    (match (map-get? ports { port-id: port-id })
+        port (+ acc u1)
+        acc)
+)
+
+(define-private (categorize-risk (report-count uint))
+    (if (>= report-count u5)
+        "high"
+        (if (>= report-count u2)
+            "medium"
+            "low"))
+)
