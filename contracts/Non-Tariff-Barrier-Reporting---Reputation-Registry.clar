@@ -208,3 +208,39 @@
             "medium"
             "low"))
 )
+
+(define-map disputes
+    { report-id: uint }
+    {
+        dispute-count: uint,
+        is-resolved: bool
+    }
+)
+
+(define-public (dispute-report (report-id uint))
+    (match (map-get? reports { report-id: report-id })
+        report
+        (let ((current-dispute (default-to { dispute-count: u0, is-resolved: false } (map-get? disputes { report-id: report-id }))))
+            (if (get is-resolved current-dispute)
+                ERR-ALREADY-REPORTED
+                (begin
+                    (map-set disputes
+                        { report-id: report-id }
+                        {
+                            dispute-count: (+ (get dispute-count current-dispute) u1),
+                            is-resolved: (if (>= (+ (get dispute-count current-dispute) u1) u3) true false)
+                        }
+                    )
+                    (if (>= (+ (get dispute-count current-dispute) u1) u3)
+                        (begin
+                            (map-delete reports { report-id: report-id })
+                            (ok true)
+                        )
+                        (ok true)
+                    )
+                )
+            )
+        )
+        ERR-NOT-FOUND
+    )
+)
