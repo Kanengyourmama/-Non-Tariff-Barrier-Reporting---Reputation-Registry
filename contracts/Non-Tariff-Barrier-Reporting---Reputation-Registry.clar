@@ -36,6 +36,11 @@
     { voted: bool }
 )
 
+(define-map user-reputations
+    { user: principal }
+    { score: int }
+)
+
 (define-data-var next-report-id uint u1)
 (define-data-var next-port-id uint u1)
 
@@ -88,6 +93,10 @@
                         reputation-score: (- (get reputation-score port) 1)
                     })
                 )
+                (map-set user-reputations
+                    { user: tx-sender }
+                    { score: (default-to 0 (get score (map-get? user-reputations { user: tx-sender }))) }
+                )
                 (var-set next-report-id (+ report-id u1))
                 (ok report-id))
             ERR-INVALID-PORT)
@@ -111,6 +120,13 @@
                         upvotes: (if is-upvote (+ (get upvotes report) u1) (get upvotes report)),
                         downvotes: (if is-upvote (get downvotes report) (+ (get downvotes report) u1))
                     })
+                )
+                (let ((reporter (get reporter report))
+                      (current-score (default-to 0 (get score (map-get? user-reputations { user: reporter })))))
+                    (map-set user-reputations
+                        { user: reporter }
+                        { score: (if is-upvote (+ current-score 1) (- current-score 1)) }
+                    )
                 )
                 (ok true)))
         ERR-NOT-FOUND)
@@ -191,6 +207,12 @@
         0)
 )
 
+(define-read-only (get-user-reputation (user principal))
+    (match (map-get? user-reputations { user: user })
+        reputation (get score reputation)
+        0)
+)
+
 (define-private (count-active-ports)
     (fold count-port-helper (list u1 u2 u3 u4 u5 u6 u7 u8 u9 u10) u0)
 )
@@ -230,6 +252,13 @@
                             dispute-count: (+ (get dispute-count current-dispute) u1),
                             is-resolved: (if (>= (+ (get dispute-count current-dispute) u1) u3) true false)
                         }
+                    )
+                    (let ((reporter (get reporter report))
+                          (current-score (default-to 0 (get score (map-get? user-reputations { user: reporter })))))
+                        (map-set user-reputations
+                            { user: reporter }
+                            { score: (- current-score 2) }
+                        )
                     )
                     (if (>= (+ (get dispute-count current-dispute) u1) u3)
                         (begin
