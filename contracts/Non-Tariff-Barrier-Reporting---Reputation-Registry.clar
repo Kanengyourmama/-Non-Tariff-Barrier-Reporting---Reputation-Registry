@@ -128,6 +128,12 @@
                         { score: (if is-upvote (+ current-score 1) (- current-score 1)) }
                     )
                 )
+                (let ((total-votes (+ (get upvotes (unwrap-panic (map-get? reports { report-id: report-id }))) (get downvotes (unwrap-panic (map-get? reports { report-id: report-id }))))))
+                    (if (and (> total-votes u0) (>= (/ (* (get upvotes (unwrap-panic (map-get? reports { report-id: report-id }))) u100) total-votes) u70))
+                        (map-set verified-reports { report-id: report-id } { is-verified: true })
+                        true
+                    )
+                )
                 (ok true)))
         ERR-NOT-FOUND)
 )
@@ -213,6 +219,12 @@
         0)
 )
 
+(define-read-only (is-report-verified (report-id uint))
+    (match (map-get? verified-reports { report-id: report-id })
+        verified (get is-verified verified)
+        false)
+)
+
 (define-private (count-active-ports)
     (fold count-port-helper (list u1 u2 u3 u4 u5 u6 u7 u8 u9 u10) u0)
 )
@@ -237,6 +249,11 @@
         dispute-count: uint,
         is-resolved: bool
     }
+)
+
+(define-map verified-reports
+    { report-id: uint }
+    { is-verified: bool }
 )
 
 (define-public (dispute-report (report-id uint))
